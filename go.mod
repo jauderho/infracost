@@ -36,7 +36,7 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
-	github.com/tidwall/gjson v1.17.0
+	github.com/tidwall/gjson v1.18.0
 	github.com/zclconf/go-cty v1.17.0
 	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/mod v0.29.0
@@ -278,7 +278,6 @@ require (
 	cloud.google.com/go v0.116.0 // indirect
 	cloud.google.com/go/storage v1.49.0 // indirect
 	github.com/apparentlymart/go-cidr v1.1.0 // indirect
-	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/aws/aws-sdk-go v1.44.122
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bmatcuk/doublestar v1.3.4
