@@ -1,10 +1,7 @@
 package main
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -50,35 +47,16 @@ func commentGitLabCmd(ctx *config.RunContext) *cobra.Command {
 			token, _ := cmd.Flags().GetString("gitlab-token")
 			tag, _ := cmd.Flags().GetString("tag")
 
-			tlsConfig := tls.Config{} // nolint: gosec
-
-			rootCAs, _ := x509.SystemCertPool()
-			if rootCAs == nil {
-				rootCAs = x509.NewCertPool()
+			tlsConfig, err := loadTLSConfigFromEnv(ctx)
+			if err != nil {
+				return err
 			}
-
-			// Load CA certificates from INFRACOST_TLS_CA_CERT_FILE if set
-			if ctx.Config.TLSCACertFile != "" {
-				caCerts, err := os.ReadFile(ctx.Config.TLSCACertFile)
-				if err != nil {
-					logging.Logger.Err(err).Msgf("Error reading CA cert file %s", ctx.Config.TLSCACertFile)
-				} else {
-					ok := rootCAs.AppendCertsFromPEM(caCerts)
-					if !ok {
-						logging.Logger.Warn().Msg("No CA certs appended, only using system certs")
-					} else {
-						logging.Logger.Debug().Msgf("Loaded CA certs from %s", ctx.Config.TLSCACertFile)
-					}
-				}
-			}
-
-			tlsConfig.RootCAs = rootCAs
 
 			extra := comment.GitLabExtra{
 				ServerURL: serverURL,
 				Token:     token,
 				Tag:       tag,
-				TLSConfig: &tlsConfig,
+				TLSConfig: tlsConfig,
 			}
 
 			commit, _ := cmd.Flags().GetString("commit")

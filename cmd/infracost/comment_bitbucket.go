@@ -47,11 +47,18 @@ func commentBitbucketCmd(ctx *config.RunContext) *cobra.Command {
 			token, _ := cmd.Flags().GetString("bitbucket-token")
 			tag, _ := cmd.Flags().GetString("tag")
 			omitDetails, _ := cmd.Flags().GetBool("exclude-cli-output")
+
+			tlsConfig, err := loadTLSConfigFromEnv(ctx)
+			if err != nil {
+				return err
+			}
+
 			extra := comment.BitbucketExtra{
 				ServerURL:   serverURL,
 				Token:       token,
 				Tag:         tag,
 				OmitDetails: omitDetails,
+				TLSConfig:   tlsConfig,
 			}
 
 			commit, _ := cmd.Flags().GetString("commit")

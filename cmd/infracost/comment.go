@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"os"
@@ -281,4 +283,32 @@ func isErrorUnhandled(err error) bool {
 	}
 
 	return true
+}
+
+// loadTLSConfigFromEnv creates a TLS config with CA certificates loaded from
+// INFRACOST_TLS_CA_CERT_FILE environment variable if set.
+func loadTLSConfigFromEnv(ctx *config.RunContext) (*tls.Config, error) {
+	tlsConfig := &tls.Config{} // nolint: gosec
+
+	rootCAs, _ := x509.SystemCertPool()
+	if rootCAs == nil {
+		rootCAs = x509.NewCertPool()
+	}
+
+	// Load CA certificates from INFRACOST_TLS_CA_CERT_FILE if set
+	if ctx.Config.TLSCACertFile != "" {
+		caCerts, err := os.ReadFile(ctx.Config.TLSCACertFile)
+		if err != nil {
+			return nil, fmt.Errorf("error reading CA cert file %s: %w", ctx.Config.TLSCACertFile, err)
+		}
+		ok := rootCAs.AppendCertsFromPEM(caCerts)
+		if !ok {
+			logging.Logger.Warn().Msg("No CA certs appended, only using system certs")
+		} else {
+			logging.Logger.Debug().Msgf("Loaded CA certs from %s", ctx.Config.TLSCACertFile)
+		}
+	}
+
+	tlsConfig.RootCAs = rootCAs
+	return tlsConfig, nil
 }
