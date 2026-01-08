@@ -286,7 +286,7 @@ func isErrorUnhandled(err error) bool {
 }
 
 // loadTLSConfigFromEnv creates a TLS config with CA certificates loaded from
-// INFRACOST_TLS_CA_CERT_FILE environment variable if set.
+// GIT_SSL_CAINFO environment variable if set.
 func loadTLSConfigFromEnv(ctx *config.RunContext) (*tls.Config, error) {
 	tlsConfig := &tls.Config{} // nolint: gosec
 
@@ -295,7 +295,7 @@ func loadTLSConfigFromEnv(ctx *config.RunContext) (*tls.Config, error) {
 		rootCAs = x509.NewCertPool()
 	}
 
-	// Load CA certificates from INFRACOST_TLS_CA_CERT_FILE if set
+	// Load CA certificates from GIT_SSL_CAINFO if set
 	if ctx.Config.TLSCACertFile != "" {
 		caCerts, err := os.ReadFile(ctx.Config.TLSCACertFile)
 		if err != nil {

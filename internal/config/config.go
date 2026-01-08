@@ -164,7 +164,7 @@ type Config struct {
 	GraphEvaluator            bool  `yaml:"graph_evaluator,omitempty" envconfig:"GRAPH_EVALUATOR"`
 
 	TLSInsecureSkipVerify *bool  `envconfig:"TLS_INSECURE_SKIP_VERIFY"`
-	TLSCACertFile         string `envconfig:"TLS_CA_CERT_FILE"`
+	TLSCACertFile         string `envconfig:"GIT_SSL_CAINFO"`
 
 	Currency       string `envconfig:"CURRENCY"`
 	CurrencyFormat string `envconfig:"CURRENCY_FORMAT"`
