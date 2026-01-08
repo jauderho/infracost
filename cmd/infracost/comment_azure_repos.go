@@ -42,10 +42,17 @@ func commentAzureReposCmd(ctx *config.RunContext) *cobra.Command {
 			token, _ := cmd.Flags().GetString("azure-access-token")
 			tag, _ := cmd.Flags().GetString("tag")
 			initActive, _ := cmd.Flags().GetBool("init-active")
+
+			tlsConfig, err := loadTLSConfigFromEnv(ctx)
+			if err != nil {
+				return err
+			}
+
 			extra := comment.AzureReposExtra{
 				Token:      token,
 				Tag:        tag,
 				InitActive: initActive,
+				TLSConfig:  tlsConfig,
 			}
 
 			prNumber, _ := cmd.Flags().GetInt("pull-request")

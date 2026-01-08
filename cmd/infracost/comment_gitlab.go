@@ -46,10 +46,17 @@ func commentGitLabCmd(ctx *config.RunContext) *cobra.Command {
 			serverURL, _ := cmd.Flags().GetString("gitlab-server-url")
 			token, _ := cmd.Flags().GetString("gitlab-token")
 			tag, _ := cmd.Flags().GetString("tag")
+
+			tlsConfig, err := loadTLSConfigFromEnv(ctx)
+			if err != nil {
+				return err
+			}
+
 			extra := comment.GitLabExtra{
 				ServerURL: serverURL,
 				Token:     token,
 				Tag:       tag,
+				TLSConfig: tlsConfig,
 			}
 
 			commit, _ := cmd.Flags().GetString("commit")

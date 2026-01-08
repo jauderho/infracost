@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"strconv"
 	"strings"
@@ -54,14 +53,11 @@ func commentGitHubCmd(ctx *config.RunContext) *cobra.Command {
 			tlsKeyFile, _ := cmd.Flags().GetString("github-tls-key-file")
 			tlsInsecureSkipVerify, _ := cmd.Flags().GetBool("github-tls-insecure-skip-verify")
 
-			tlsConfig := tls.Config{} // nolint: gosec
-
-			rootCAs, _ := x509.SystemCertPool()
-			if rootCAs == nil {
-				rootCAs = x509.NewCertPool()
+			tlsConfig, err := loadTLSConfigFromEnv(ctx)
+			if err != nil {
+				return errors.Wrap(err, "Error loading TLS config")
 			}
 
-			tlsConfig.RootCAs = rootCAs
 			tlsConfig.InsecureSkipVerify = tlsInsecureSkipVerify // nolint: gosec
 
 			if tlsCertFile != "" && tlsKeyFile != "" {
@@ -76,7 +72,7 @@ func commentGitHubCmd(ctx *config.RunContext) *cobra.Command {
 				APIURL:    apiURL,
 				Token:     token,
 				Tag:       tag,
-				TLSConfig: &tlsConfig,
+				TLSConfig: tlsConfig,
 			}
 
 			commit, _ := cmd.Flags().GetString("commit")
