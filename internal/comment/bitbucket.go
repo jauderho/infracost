@@ -3,6 +3,7 @@ package comment
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -78,6 +79,8 @@ type BitbucketExtra struct {
 	Tag string
 	// Token is the Bitbucket access token.
 	Token string
+	// TLSConfig is the TLS configuration to use when connecting to the Bitbucket API.
+	TLSConfig *tls.Config
 }
 
 // bitbucketAPIComment represents API response structure of Azure Repos comment.
@@ -99,7 +102,7 @@ type bitbucketAPIComment struct {
 }
 
 // newBitbucketAPIClient creates a HTTP client.
-func newBitbucketAPIClient(ctx context.Context, token string) (*http.Client, error) {
+func newBitbucketAPIClient(ctx context.Context, token string, tlsConfig *tls.Config) (*http.Client, error) {
 	accessToken, tokenType := token, "Bearer"
 
 	if strings.Contains(token, ":") {
@@ -113,7 +116,11 @@ func newBitbucketAPIClient(ctx context.Context, token string) (*http.Client, err
 			TokenType:   tokenType,
 		},
 	)
-	httpClient := oauth2.NewClient(ctx, ts)
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = tlsConfig
+	client := &http.Client{Transport: transport}
+	httpCtx := context.WithValue(ctx, oauth2.HTTPClient, client)
+	httpClient := oauth2.NewClient(httpCtx, ts)
 
 	return httpClient, nil
 }
@@ -134,7 +141,7 @@ func NewBitbucketPRHandler(ctx context.Context, repo string, targetRef string, e
 		return nil, errors.Wrap(err, "Error parsing targetRef as pull request number")
 	}
 
-	httpClient, err := newBitbucketAPIClient(ctx, extra.Token)
+	httpClient, err := newBitbucketAPIClient(ctx, extra.Token, extra.TLSConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -356,7 +363,7 @@ type bitbucketCommitHandler struct {
 
 // NewBitbucketCommitHandler creates a new PlatformHandler for Bitbucket commits.
 func NewBitbucketCommitHandler(ctx context.Context, repo string, targetRef string, extra BitbucketExtra) (*CommentHandler, error) {
-	httpClient, err := newBitbucketAPIClient(ctx, extra.Token)
+	httpClient, err := newBitbucketAPIClient(ctx, extra.Token, extra.TLSConfig)
 	if err != nil {
 		return nil, err
 	}

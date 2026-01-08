@@ -2,9 +2,7 @@ package main
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -55,29 +53,11 @@ func commentGitHubCmd(ctx *config.RunContext) *cobra.Command {
 			tlsKeyFile, _ := cmd.Flags().GetString("github-tls-key-file")
 			tlsInsecureSkipVerify, _ := cmd.Flags().GetBool("github-tls-insecure-skip-verify")
 
-			tlsConfig := tls.Config{} // nolint: gosec
-
-			rootCAs, _ := x509.SystemCertPool()
-			if rootCAs == nil {
-				rootCAs = x509.NewCertPool()
+			tlsConfig, err := loadTLSConfigFromEnv(ctx)
+			if err != nil {
+				return errors.Wrap(err, "Error loading TLS config")
 			}
 
-			// Load CA certificates from INFRACOST_TLS_CA_CERT_FILE if set
-			if ctx.Config.TLSCACertFile != "" {
-				caCerts, err := os.ReadFile(ctx.Config.TLSCACertFile)
-				if err != nil {
-					logging.Logger.Err(err).Msgf("Error reading CA cert file %s", ctx.Config.TLSCACertFile)
-				} else {
-					ok := rootCAs.AppendCertsFromPEM(caCerts)
-					if !ok {
-						logging.Logger.Warn().Msg("No CA certs appended, only using system certs")
-					} else {
-						logging.Logger.Debug().Msgf("Loaded CA certs from %s", ctx.Config.TLSCACertFile)
-					}
-				}
-			}
-
-			tlsConfig.RootCAs = rootCAs
 			tlsConfig.InsecureSkipVerify = tlsInsecureSkipVerify // nolint: gosec
 
 			if tlsCertFile != "" && tlsKeyFile != "" {
@@ -92,7 +72,7 @@ func commentGitHubCmd(ctx *config.RunContext) *cobra.Command {
 				APIURL:    apiURL,
 				Token:     token,
 				Tag:       tag,
-				TLSConfig: &tlsConfig,
+				TLSConfig: tlsConfig,
 			}
 
 			commit, _ := cmd.Flags().GetString("commit")
