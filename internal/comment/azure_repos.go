@@ -3,6 +3,7 @@ package comment
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -68,6 +69,8 @@ type AzureReposExtra struct {
 	// Tag is used to identify the Infracost comment.
 	Tag        string
 	InitActive bool
+	// TLSConfig is the TLS configuration to use when connecting to the Azure Repos API.
+	TLSConfig *tls.Config
 }
 
 // azureAPIComment represents API response structure of Azure Repos comment.
@@ -87,7 +90,7 @@ type azureAPIComment struct {
 const azurePATLength = 52
 
 // newAzureReposAPIClient creates a HTTP client.
-func newAzureReposAPIClient(ctx context.Context, token string) (*http.Client, error) {
+func newAzureReposAPIClient(ctx context.Context, token string, tlsConfig *tls.Config) (*http.Client, error) {
 	accessToken, tokenType := token, "Bearer"
 
 	if len(token) == azurePATLength {
@@ -103,7 +106,13 @@ func newAzureReposAPIClient(ctx context.Context, token string) (*http.Client, er
 			TokenType:   tokenType,
 		},
 	)
-	httpClient := oauth2.NewClient(ctx, ts)
+
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = tlsConfig
+	client := &http.Client{Transport: transport}
+	httpCtx := context.WithValue(ctx, oauth2.HTTPClient, client)
+
+	httpClient := oauth2.NewClient(httpCtx, ts)
 
 	return httpClient, nil
 }
@@ -148,7 +157,7 @@ func NewAzureReposPRHandler(ctx context.Context, repoURL string, targetRef strin
 		return nil, errors.Wrap(err, "Error parsing targetRef as pull request number")
 	}
 
-	httpClient, err := newAzureReposAPIClient(ctx, extra.Token)
+	httpClient, err := newAzureReposAPIClient(ctx, extra.Token, extra.TLSConfig)
 	if err != nil {
 		return nil, err
 	}

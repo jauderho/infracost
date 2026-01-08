@@ -3,6 +3,7 @@ package comment
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -70,15 +71,23 @@ type GitLabExtra struct {
 	Token string
 	// Tag used to identify the Infracost comment
 	Tag string
+	// TLSConfig is the TLS configuration to use when connecting to the GitLab API.
+	TLSConfig *tls.Config
 }
 
 // newGitLabAPIClients creates a HTTP client and a GraphQL client.
 // If the serverURL is not set, the default GitLab server URL will be used.
-func newGitLabAPIClients(ctx context.Context, token string, serverURL string) (*http.Client, *graphql.Client, error) {
+func newGitLabAPIClients(ctx context.Context, token string, serverURL string, tlsConfig *tls.Config) (*http.Client, *graphql.Client, error) {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
 	)
-	httpClient := oauth2.NewClient(ctx, ts)
+
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = tlsConfig
+	client := &http.Client{Transport: transport}
+	httpCtx := context.WithValue(ctx, oauth2.HTTPClient, client)
+
+	httpClient := oauth2.NewClient(httpCtx, ts)
 
 	u, err := url.Parse(serverURL)
 	if err != nil {
@@ -117,7 +126,7 @@ func NewGitLabPRHandler(ctx context.Context, project string, targetRef string, e
 		serverURL = "https://gitlab.com"
 	}
 
-	httpClient, graphqlClient, err := newGitLabAPIClients(ctx, extra.Token, serverURL)
+	httpClient, graphqlClient, err := newGitLabAPIClients(ctx, extra.Token, serverURL, extra.TLSConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -323,7 +332,7 @@ func NewGitLabCommitHandler(ctx context.Context, project string, targetRef strin
 		serverURL = "https://gitlab.com"
 	}
 
-	httpClient, graphqlClient, err := newGitLabAPIClients(ctx, extra.Token, serverURL)
+	httpClient, graphqlClient, err := newGitLabAPIClients(ctx, extra.Token, serverURL, extra.TLSConfig)
 	if err != nil {
 		return nil, err
 	}

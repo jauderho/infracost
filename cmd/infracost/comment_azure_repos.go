@@ -1,7 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -42,10 +45,36 @@ func commentAzureReposCmd(ctx *config.RunContext) *cobra.Command {
 			token, _ := cmd.Flags().GetString("azure-access-token")
 			tag, _ := cmd.Flags().GetString("tag")
 			initActive, _ := cmd.Flags().GetBool("init-active")
+
+			tlsConfig := tls.Config{} // nolint: gosec
+
+			rootCAs, _ := x509.SystemCertPool()
+			if rootCAs == nil {
+				rootCAs = x509.NewCertPool()
+			}
+
+			// Load CA certificates from INFRACOST_TLS_CA_CERT_FILE if set
+			if ctx.Config.TLSCACertFile != "" {
+				caCerts, err := os.ReadFile(ctx.Config.TLSCACertFile)
+				if err != nil {
+					logging.Logger.Err(err).Msgf("Error reading CA cert file %s", ctx.Config.TLSCACertFile)
+				} else {
+					ok := rootCAs.AppendCertsFromPEM(caCerts)
+					if !ok {
+						logging.Logger.Warn().Msg("No CA certs appended, only using system certs")
+					} else {
+						logging.Logger.Debug().Msgf("Loaded CA certs from %s", ctx.Config.TLSCACertFile)
+					}
+				}
+			}
+
+			tlsConfig.RootCAs = rootCAs
+
 			extra := comment.AzureReposExtra{
 				Token:      token,
 				Tag:        tag,
 				InitActive: initActive,
+				TLSConfig:  &tlsConfig,
 			}
 
 			prNumber, _ := cmd.Flags().GetInt("pull-request")
